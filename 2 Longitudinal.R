@@ -460,7 +460,7 @@ data.matched.analysis = data.matched %>% select(-CASE, -SERIAL, -QUESTNNR, -stra
       rename_with(paste0, .cols=-REF, "_t0"), 
     by="REF") %>% 
   left_join( #add t1
-    data.old.studi %>% select(SERIAL, asi3, pswq, stai_trait) %>% rename(match = SERIAL) %>% 
+    data.old.studi %>% select(SERIAL, datestamp, asi3, pswq, stai_trait) %>% rename(match = SERIAL) %>% 
       mutate(strain = bind_cols((asi3-data.sfb.baselines$asi3.m0)/data.sfb.baselines$asi3.sd0, 
                                 (pswq-data.sfb.baselines$pswq.m0)/data.sfb.baselines$pswq.sd0, 
                                 (stai_trait-data.sfb.baselines$stai_trait.m0)/data.sfb.baselines$stai_trait.sd0) %>% rowMeans()) %>% 
@@ -513,7 +513,8 @@ data.matched.analysis %>% summarise(le_t0.m = mean(le_t0, na.rm=T), le_t0.sd = s
 #T2 predictor
 data.matched.analysis %>% summarise(phq2_t2.m = mean(phq2_t2), phq2_t2.sd = sd(phq2_t2), cutoff = mean(phq2_t2 >= 3))
 
-
+#dates
+data.matched.analysis %>% select(contains("datestamp")) %>% select(sort(tidyselect::peek_vars())) %>% summary()
 
 # Selective Attrition -----------------------------------------------------
 df = data.sfb.t0 %>% mutate(stayed = REF %in% {data.matched.analysis %>% pull(REF)})
@@ -558,6 +559,9 @@ data.matched.analysis.long %>% group_by(time, gender) %>% summarise(strain.se = 
   geom_line(size=2) + geom_point(size=5) + myGgTheme +
   scale_x_discrete("", labels = c("Pre","Peak","Downturn")) + ylab("Strain") + scale_color_discrete("Gender") + scale_fill_discrete("Gender")
 #ggsave("1 Time & Gender.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
+#ggsave("Figure 1. Time & Gender.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
+#ggsave("Figure 1. Time & Gender.svg" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/Figures/", .), width=6.5, height=6.5/16*9, units="in")
+
 with(data.matched.analysis, t.test(x=strain_t1, y=strain_t0, paired=T) %>% apa::t_apa(es_ci=T))
 with(data.matched.analysis, t.test(x=strain_t2, y=strain_t1, paired=T) %>% apa::t_apa(es_ci=T))
 with(data.matched.analysis, t.test(x=strain_t2, y=strain_t0, paired=T) %>% apa::t_apa(es_ci=T))
@@ -580,10 +584,11 @@ plot.spai = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, spai_group), fill=spai_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, spai_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("SPAI") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Social Anxiety (SPAI)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("SPAI") + scale_fill_discrete("SPAI") + ylab("Strain") + xlab("")
 plot.spai
 #ggsave("2.1 SPAI.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
+
 data.matched.analysis %>% select(spai_t0, strain_t0, strain_t1, strain_t2) %>% corrr::correlate()
 #data.matched.analysis.long %>% group_by(gender) %>% summarise(spai_t0 = mean(spai_t0)) #gender main effect
 data.matched.analysis.long %>% group_by(REF, gender, spai_t0) %>% summarise(strain = mean(strain)) %>% 
@@ -609,7 +614,7 @@ plot.lsas = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, lsas_group), fill=lsas_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, lsas_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("LSAS") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Social Anxiety (LSAS)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("LSAS") + scale_fill_discrete("LSAS") + ylab("Strain") + xlab("")
 plot.lsas
 #ggsave("2.2 LSAS.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
@@ -639,7 +644,7 @@ plot.gse = data.matched.analysis.long %>% filter(gse_group %>% is.na() == F) %>%
   geom_violin(aes(group=interaction(time, gse_group), fill=gse_group), color="black", alpha=.5, data=data.matched.analysis.long %>% filter(gse_group %>% is.na() == F)) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long %>% filter(gse_group %>% is.na() == F), aes(group=interaction(time, gse_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("GSE") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Self-Efficacy (GSE)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("GSE") + scale_fill_discrete("GSE") + ylab("Strain") + xlab("")
 plot.gse
 #ggsave("3.4 GSE.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
@@ -667,7 +672,7 @@ plot.mal = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, cerq_maladapt_group), fill=cerq_maladapt_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, cerq_maladapt_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("CERQ-mal") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Maladaptive Emotion Regulation (CERQ-mal)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("CERQ-mal") + scale_fill_discrete("CERQ-mal") + ylab("Strain") + xlab("")
 plot.mal
 #ggsave("3.1 CERQ mal.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
@@ -675,8 +680,9 @@ data.matched.analysis %>% select(cerq_maladapt_t0, strain_t0, strain_t1, strain_
 with(data.matched.analysis %>% mutate(slope = strain_t1-strain_t0), cor.test(cerq_maladapt_t0, slope) %>% apa::cor_apa(r_ci=T))
 with(data.matched.analysis %>% mutate(slope = strain_t2-strain_t1), cor.test(cerq_maladapt_t0, slope) %>% apa::cor_apa(r_ci=T))
 
-cowplot::plot_grid(plot.spai, plot.lsas, plot.gse, plot.mal, ncol=2, labels="AUTO") #Figure 3
-#ggsave("Figure 3. Risk Factors.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080*2, units="px")
+cowplot::plot_grid(plot.spai, plot.lsas, plot.gse, plot.mal, ncol=2, labels="auto") #Figure 2
+#ggsave("Figure 2. Risk Factors.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080*2, units="px")
+#ggsave("Figure 2. Risk Factors.svg" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/Figures/", .), width=6.5*2, height=6.5/16*9*2, units="in")
 
 #CERQ adaptive
 data.matched.analysis.long.scaled %>% 
@@ -697,7 +703,7 @@ plot.adapt.simple = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, cerq_adapt_group), fill=cerq_adapt_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, cerq_adapt_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("CERQ-adapt") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Adaptive Emotion Regulation (CERQ-adapt)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("CERQ-adapt") + scale_fill_discrete("CERQ-adapt") + ylab("Strain") + xlab("")
 plot.adapt.simple
 #ggsave("3.2 CERQ adapt.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
@@ -713,23 +719,36 @@ plot.adapt = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, cerq_adapt_group), fill=cerq_adapt_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, cerq_adapt_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("CERQ-adapt") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Adaptive Emotion Regulation (CERQ-adapt)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("CERQ-adapt") + scale_fill_discrete("CERQ-adapt") + ylab("Strain") + xlab("")
 plot.adapt
 #ggsave("3.2.2 CERQ adapt gender days.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080*2, units="px")
 
-#male
+# data.matched.analysis.long %>% mutate(across(.cols=c("age_t2", "days", "cerq_adapt_t0"), scale),
+#                                       cerqXdays = cerq_adapt_t0 * days) %>% 
+#   group_by(gender, time) %>% summarise(cor = cor.test(strain, cerqXdays) %>% apa::cor_apa(r_ci=T, print=F))
+data.matched.analysis.long %>% summarise(cor = cor.test(strain, cerq_adapt_t0) %>% apa::cor_apa(r_ci=T, print=F),
+                                         .by=c(gender, time, days_group)) %>% arrange(gender, time, days_group)
+
+## descriptives of time gap between first and last assessment
+# data.matched.analysis.long %>% summarise(weeks.m = mean(days/7), weeks.sd = sd(days/7), .by=days_group)
+# data.matched.analysis.long %>% summarise(weeks.m = mean(days/7), weeks.sd = sd(days/7), .by=c(days_group, gender))
+#data.matched.analysis.long %>% summarise(years.m = mean(days/365), years.sd = sd(days/365), .by=days_group)
+data.matched.analysis.long %>% summarise(years.m = mean(days/365), years.sd = sd(days/365), .by=c(gender, days_group)) %>% arrange(gender, days_group)
+
+##cor time gap and age at last assessment (collinearity)
+with(data.matched.analysis, cor.test(days, age_t2) %>% apa::cor_apa(r_ci=T))
+data.matched.analysis %>% group_by(gender) %>% summarise(cor = cor.test(days, age_t2) %>% apa::cor_apa(r_ci=T, print=F))
+
+
+#male only
 data.matched.analysis.long.scaled %>% filter(gender=="male") %>% mutate(across(.cols=c("age_t2", "days", "cerq_adapt_t0"), scale)) %>% 
   afex::aov_ez(id="REF", dv="strain", .,
                within=c("time"),
                between=c("age_t2", "days", "cerq_adapt_t0"),
                observed=c("age_t2", "days", "cerq_adapt_t0"),
                factorize=F) %>% apa::anova_apa(force_sph_corr=T)
-data.matched.analysis.long %>% mutate(across(.cols=c("age_t2", "days", "cerq_adapt_t0"), scale),
-                                      cerqXdays = cerq_adapt_t0 * days) %>% 
-  group_by(gender, time) %>% summarise(cor = cor.test(strain, cerqXdays) %>% apa::cor_apa(r_ci=T, print=F))
-
-#female
+#female only
 data.matched.analysis.long.scaled %>% filter(gender=="female") %>% mutate(across(.cols=c("age_t2", "days", "cerq_adapt_t0"), scale)) %>% 
   afex::aov_ez(id="REF", dv="strain", .,
                within=c("time"),
@@ -749,8 +768,6 @@ data.matched.analysis.long.scaled %>% filter(gender=="female") %>% mutate(across
 #cerq_adapt low & age low = risk group for females (i.e. lower recovery)
 #ggsave("3.2.3 CERQ adapt female age.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080*2, units="px")
 
-with(data.matched.analysis, cor.test(days, age_t2) %>% apa::cor_apa(r_ci=T))
-data.matched.analysis %>% group_by(gender) %>% summarise(cor = cor.test(days, age_t2) %>% apa::cor_apa(r_ci=T, print=F))
 
 
 #CERQ acceptance
@@ -772,14 +789,15 @@ plot.accept = data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, cerq_accept_group), fill=cerq_accept_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, cerq_accept_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("CERQ-accept") +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Acceptance (CERQ-accept)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("CERQ-accept") + scale_fill_discrete("CERQ-accept") + ylab("Strain") + xlab("")
 plot.accept
 #ggsave("3.3 CERQ accept.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080, units="px")
 data.matched.analysis %>% select(cerq_acceptance_t0, strain_t0, strain_t1, strain_t2) %>% corrr::correlate()
 
-cowplot::plot_grid(plot.adapt, plot.accept, rel_heights = c(2, 1), ncol=1, labels="AUTO") #Figure 4
-#ggsave("Figure 4. Risk Factors Gender.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080*3, units="px")
+cowplot::plot_grid(plot.adapt, plot.accept, rel_heights = c(2, 1), ncol=1, labels="auto") #Figure 3
+#ggsave("Figure 3. Risk Factors Gender.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920*2, height=1080*3, units="px")
+#ggsave("Figure 3. Risk Factors Gender.svg" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/Figures/", .), width=6.5*2, height=6.5/16*9*3, units="in")
 
 
 #Childhood Trauma Questionnaire (CTQ)
@@ -800,9 +818,12 @@ data.matched.analysis.long %>%
   geom_violin(aes(group=interaction(time, ctq_group), fill=ctq_group), color="black", alpha=.5, data=data.matched.analysis.long) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long, aes(group=interaction(time, ctq_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Childhood Trauma (CTQ)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("CTQ") + scale_fill_discrete("CTQ") + ylab("Strain") + xlab("")
 #ggsave("4.1 CTQ.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
+#ggsave("Figure 4. CTQ.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
+#ggsave("Figure 4. CTQ.svg" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/Figures/", .), width=6.5, height=6.5/16*9, units="in")
+
 #data.matched.analysis %>% select(ctq_t0, strain_t0, strain_t1, strain_t2) %>% corrr::correlate()
 with(data.matched.analysis, cor.test(ctq_t0, strain_t0) %>% apa::cor_apa(r_ci=T))
 with(data.matched.analysis, cor.test(ctq_t0, strain_t1) %>% apa::cor_apa(r_ci=T))
@@ -829,7 +850,7 @@ data.matched.analysis.long %>% filter(lte_t0 %>% is.na() == F) %>%
   geom_violin(aes(group=interaction(time, lte_group), fill=lte_group), color="black", alpha=.5, data=data.matched.analysis.long %>% filter(lte_t0 %>% is.na() == F)) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long %>% filter(lte_t0 %>% is.na() == F), aes(group=interaction(time, lte_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Threatening Events (LTE)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("LTE") + scale_fill_discrete("LTE") + ylab("Strain") + xlab("")
 #ggsave("4.2 LTE.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
 data.matched.analysis %>% select(lte_t0, strain_t0, strain_t1, strain_t2) %>% corrr::correlate()
@@ -852,7 +873,7 @@ data.matched.analysis.long %>% filter(le_t0 %>% is.na() == F) %>%
   geom_violin(aes(group=interaction(time, le_group), fill=le_group), color="black", alpha=.5, data=data.matched.analysis.long %>% filter(le_t0 %>% is.na() == F)) +
   geom_boxplot(width=0.1, position=position_dodge(width=.9), data=data.matched.analysis.long %>% filter(le_t0 %>% is.na() == F), aes(group=interaction(time, le_group))) +
   geom_errorbar(aes(ymin=strain-strain.se*1.96, ymax=strain+strain.se*1.96), size=2, width=.25) +
-  geom_line(size=2) + geom_point(size=5) + myGgTheme +
+  geom_line(size=2) + geom_point(size=5) + myGgTheme + ggtitle("Adverse Life Events (ALE)") +
   scale_x_discrete(labels = c("Pre","Peak","Downturn")) + scale_color_discrete("ALE") + scale_fill_discrete("ALE") + ylab("Strain") + xlab("")
 #ggsave("4.3 LE.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .), width=1920, height=1080, units="px")
 data.matched.analysis %>% select(le_t0, strain_t0, strain_t1, strain_t2) %>% corrr::correlate()

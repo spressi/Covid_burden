@@ -1,4 +1,6 @@
 library(tidyverse)
+library(psych); library(ltm) #Cronbach's alpha
+library(nFactors) #factor analysis
 #library(Matching); library(rgenoud)
 
 missing.max = .2
@@ -300,6 +302,36 @@ codes.matched = codes.matched[codes.matched %in% data.old.studi$SERIAL]
 data.t2 %>% group_by(gender, QUESTNNR) %>% summarise(N = n()) %>% arrange(gender, desc(QUESTNNR))
 data.t2 %>% select(asi3, stai_trait, pswq) %>% summarise(across(.fn=list(m = mean, sd = sd)))
 data.t2 %>% select(asi3, stai_trait, pswq) %>% reframe(across(.fns=range))
+
+# Reliability -------------------------------------------------------------
+#ASI
+data.t2.raw %>% select(starts_with("AS01")) %>% #no reverse items
+  #psych::alpha() #comprehensive analysis
+  ltm::cronbach.alpha(na.rm=T) #minimal output
+
+#PSWQ
+data.t2.raw %>% select(starts_with("PS01")) %>% 
+  mutate(across(c(PS01_01, PS01_03, PS01_08, PS01_10, PS01_11), ~ 6 - .)) %>% #reverse items
+  #psych::alpha() #comprehensive analysis
+  ltm::cronbach.alpha(na.rm=T) #minimal output
+
+#STAI-T
+data.t2.raw %>% select(starts_with("ST02")) %>% 
+  mutate(across(c(ST02_01, ST02_03, ST02_06, ST02_07, ST02_10, ST02_13, ST02_14, ST02_16, ST02_19), ~ 5 - .)) %>% #reverse items
+  #psych::alpha() #comprehensive analysis
+  ltm::cronbach.alpha(na.rm=T) #minimal output
+
+
+# Exploratory Factor Analysis ---------------------------------------------
+#png("0 Factor Analysis.png" %>% paste0("C:/Users/mar84qk/Dropbox/Arbeit/Corona Psychosocial/Ergebnisse/", .))
+data.t2.raw %>% select(starts_with("AS01") | starts_with("PS01") | starts_with("ST02")) %>% 
+  na.omit() %>% 
+  mutate(across(c(PS01_01, PS01_03, PS01_08, PS01_10, PS01_11), ~ 6 - .), #reverse score PSWQ
+         across(c(ST02_01, ST02_03, ST02_06, ST02_07, ST02_10, ST02_13, ST02_14, ST02_16, ST02_19), ~ 5 - .)) %>% #reverse score STAI-T
+  #factanal(., factors = ncol(.)-1, rotation="varimax") #doesn't work
+  #psych::nfactors()
+  cor() %>% eigenComputes() %>% nScree() %>% plotnScree() #nFactors package, see https://www.statmethods.net/advstats/factor.html#:~:text=Determining%20the%20Number%20of%20Factors%20to%20Extract
+#dev.off()
 
 # For Prevention Center ---------------------------------------------------
 prevention = data.t2 %>% select(CASE, REF, QUESTNNR, gender, age, STARTED) %>% 
